@@ -1,12 +1,12 @@
 {
-  "projectId": "gen-lang-client-0535145441",
-  "appId": "1:458577642631:web:f1250ce06fb59fdb426422",
-  "apiKey": "AIzaSyCIz3Okbu8EXIPdfSzio9na8ERQlvmcvFM",
-  "authDomain": "gen-lang-client-0535145441.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-spinnerminecloud-8a45f422-dc86-497e-83f5-d5a13d1c4d1c",
-  "storageBucket": "gen-lang-client-0535145441.firebasestorage.app",
-  "messagingSenderId": "458577642631",
-  "measurementId": "",
-  "oAuthClientId": "458577642631-am630hh249t2p5ov3tk7la6iibbapmb1.apps.googleusercontent.com",
+  "projectId": "spinnermine-cloud-production",
+  "appId": "1:157443993763:web:693be9aa66e7b3c7104f16",
+  "apiKey": "AIzaSyB9Eh0vir23mpO60t42-rjbDL77gdIbG-E",
+  "authDomain": "spinnermine-cloud-production.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "spinnermine-cloud-production.firebasestorage.app",
+  "messagingSenderId": "157443993763",
+  "measurementId": "G-W49MT8XT2T",
+  "oAuthClientId": "",
   "recaptchaSiteKey": ""
 }

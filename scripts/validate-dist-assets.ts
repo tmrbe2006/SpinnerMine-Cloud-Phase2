@@ -132,7 +132,45 @@ export function validateDistAssets(): boolean {
       process.exit(1);
     }
   }
-  console.log(` ✓ Verified all ${jsFiles.length} compiled JS chunk(s) have zero hardcoded root-absolute asset URLs`);
+
+  // 8. Strict Production Firebase Configuration Gate (Requirement 5 & 6)
+  console.log(`\nVerifying Production Firebase Configuration Gate:`);
+  const configPath = path.resolve(rootDir, 'firebase-applet-config.json');
+  if (!fs.existsSync(configPath)) {
+    console.error('FATAL: firebase-applet-config.json does not exist!');
+    process.exit(1);
+  }
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  if (config.projectId !== 'spinnermine-cloud-production') {
+    console.error(`FATAL: Forbidden non-production Firebase projectId "${config.projectId}" detected!`);
+    console.error('Windows Production builds must strictly target "spinnermine-cloud-production".');
+    process.exit(1);
+  }
+  if (config.firestoreDatabaseId && config.firestoreDatabaseId !== '(default)') {
+    console.error(`FATAL: Forbidden non-default Firestore database "${config.firestoreDatabaseId}" detected! Production must target "(default)".`);
+    process.exit(1);
+  }
+  console.log(` ✓ Verified source config: Project ID = "${config.projectId}", Database = "${config.firestoreDatabaseId || '(default)'}"`);
+
+  // 9. Inspect Final Compiled JavaScript Bundle for Production Firebase targeting
+  let foundProductionProjectInBundle = false;
+  for (const jsFile of jsFiles) {
+    const jsContent = fs.readFileSync(path.join(distDir, 'assets', jsFile), 'utf8');
+    if (jsContent.includes('spinnermine-cloud-production')) {
+      foundProductionProjectInBundle = true;
+    }
+    if (jsContent.includes('gen-lang-client-0535145441') || jsContent.includes('ai-studio-spinnerminecloud') || jsContent.includes('grounded-cycling-dv9wh')) {
+      console.error(`FATAL: Legacy or development project identifier leaked into compiled Electron asset: ${jsFile}`);
+      console.error('Final production bundle must contain strictly "spinnermine-cloud-production"!');
+      process.exit(1);
+    }
+  }
+
+  if (!foundProductionProjectInBundle) {
+    console.error('FATAL: Compiled bundle does not contain "spinnermine-cloud-production" target project!');
+    process.exit(1);
+  }
+  console.log(' ✓ Verified compiled Windows bundle strictly targets "spinnermine-cloud-production" with zero dev project leaks.');
 
   console.log('\n================================================================');
   console.log('SUCCESS: All pre-package asset and link verifications passed!');

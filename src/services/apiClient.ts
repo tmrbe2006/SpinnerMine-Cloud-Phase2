@@ -647,6 +647,32 @@ export async function linkWorkerInstallation(
   };
 }
 
+/**
+ * Fetches all registered workers for the authenticated user via backend API.
+ * Serves as an authoritative fallback if direct Firestore subscriptions encounter index or permission issues.
+ */
+export async function fetchUserWorkers(idToken?: string): Promise<{
+  success: boolean;
+  workers?: MiningWorker[];
+  error?: string;
+}> {
+  if (!idToken || !idToken.trim()) {
+    return { success: false, error: 'Firebase authentication token is required' };
+  }
+  const res = await apiFetch<{ success: boolean; workers: MiningWorker[] }>(
+    '/api/workers',
+    { method: 'GET' },
+    idToken.trim()
+  );
+  if (res.ok && res.data) {
+    return { success: true, workers: res.data.workers || [] };
+  }
+  return {
+    success: false,
+    error: res.error || 'Failed to fetch workers from backend API'
+  };
+}
+
 export const apiClient = {
   getBackendBaseUrl,
   setCustomBackendUrl,
@@ -663,5 +689,6 @@ export const apiClient = {
   archiveWorker,
   mergeWorkers,
   renameWorker,
-  linkWorkerInstallation
+  linkWorkerInstallation,
+  fetchUserWorkers
 };

@@ -53,7 +53,8 @@ import {
   DEFAULT_PRODUCTION_BACKEND_URL,
   getDuplicateWorkers,
   renameWorker,
-  linkWorkerInstallation
+  linkWorkerInstallation,
+  fetchUserWorkers
 } from '../services/apiClient';
 import {
   computeWorkerStatus,
@@ -765,6 +766,19 @@ export const MiningDashboardPage: React.FC<MiningDashboardPageProps> = ({ onOpen
       return;
     }
 
+    const cachedKey = `spinnermine_cached_workers_${currentUser.uid}`;
+    // 1. Immediately hydrate from local cache to prevent empty screen flicker / disappearance
+    try {
+      const cached = localStorage.getItem(cachedKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setWorkers(parsed);
+          setLoadingWorkers(false);
+        }
+      }
+    } catch {}
+
     let localDrafts: MiningWorker[] = [];
     try {
       localDrafts = JSON.parse(localStorage.getItem(`spinnermine_pending_workers_${currentUser.uid}`) || '[]');
@@ -797,6 +811,11 @@ export const MiningDashboardPage: React.FC<MiningDashboardPageProps> = ({ onOpen
         setWorkers(mergedList);
         setLoadingWorkers(false);
 
+        // Cache persistent workers so offline or reload immediately displays devices
+        try {
+          localStorage.setItem(cachedKey, JSON.stringify(mergedList));
+        } catch {}
+
         // Aggregate actual telemetry from active hardware workers
         const activeWorkers = mergedList.filter(w => w.status === 'mining');
         if (activeWorkers.length > 0) {
@@ -827,10 +846,29 @@ export const MiningDashboardPage: React.FC<MiningDashboardPageProps> = ({ onOpen
         }
       },
       (err) => {
-        console.warn('[Mining Dashboard] Note on worker Firestore subscription:', err.message);
-        if (localDrafts.length > 0) {
-          setWorkers(localDrafts.map(d => ({ ...d, isPendingSync: true, status: 'pending_sync' as const })));
-        }
+        const targetProj = db.app?.options?.projectId || 'unknown';
+        console.warn(`[Mining Dashboard] Note on worker Firestore subscription (Project: ${targetProj}, UID: ${currentUser.uid}):`, err.message);
+
+        // CRITICAL: DO NOT convert subscription error into an empty list!
+        // Fallback to Authoritative Backend API endpoint to fetch workers if direct Firestore subscription encounters network or index issues
+        currentUser.getIdToken().then(async (idToken) => {
+          try {
+            const apiRes = await fetchUserWorkers(idToken);
+            if (apiRes.success && apiRes.workers && apiRes.workers.length > 0) {
+              const apiWorkers = apiRes.workers;
+              const remainingDrafts = localDrafts.filter(d => !apiWorkers.some(w => (w.workerId && w.workerId === d.workerId) || (w.id && w.id === d.id)));
+              const merged = [
+                ...apiWorkers,
+                ...remainingDrafts.map(d => ({ ...d, isPendingSync: true, status: 'pending_sync' as const }))
+              ];
+              setWorkers(merged);
+              try {
+                localStorage.setItem(cachedKey, JSON.stringify(merged));
+              } catch {}
+            }
+          } catch {}
+        }).catch(() => {});
+
         setLoadingWorkers(false);
       }
     );
@@ -2204,7 +2242,13 @@ export const MiningDashboardPage: React.FC<MiningDashboardPageProps> = ({ onOpen
 
         {(() => {
           const activeWorkers = workers.filter(w => !w.isArchived && !w.mergedInto && w.status !== 'archived');
-          const archivedWorkers = workers.filter(w => w.isArchived || Boolean(w.mergedInto) || w.status === 'archived');
+          // Enforce primary device ordering: tm (w_qBPFqVEe_tm) always at top
+          activeWorkers.sort((a, b) => {
+            if (a.workerId === 'w_qBPFqVEe_tm' || a.name === 'tm') return -1;
+            if (b.workerId === 'w_qBPFqVEe_tm' || b.name === 'tm') return 1;
+            return 0;
+          });
+          const archivedWorkers = workers.filter(w => Boolean(w.isArchived) || Boolean(w.mergedInto) || w.status === 'archived');
 
           return (
             <>

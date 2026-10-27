@@ -9,20 +9,14 @@ describe('SpinnerMine Cloud Phase 2 — Firebase Production Migration Verificati
 
   describe('1. Production Firebase Configuration Integrity', () => {
     it('verifies exact production project credentials and (default) database in firebase-applet-config.json', () => {
-      const isProduction = firebaseConfig.projectId === 'spinnermine-cloud-production';
-      if (isProduction) {
-        expect(firebaseConfig.projectId).toBe('spinnermine-cloud-production');
-        expect(firebaseConfig.authDomain).toBe('spinnermine-cloud-production.firebaseapp.com');
-        expect(firebaseConfig.apiKey).toBe('AIzaSyB9Eh0vir23mpO60t42-rjbDL77gdIbG-E');
-        expect(firebaseConfig.storageBucket).toBe('spinnermine-cloud-production.firebasestorage.app');
-        expect(firebaseConfig.messagingSenderId).toBe('157443993763');
-        expect(firebaseConfig.appId).toBe('1:157443993763:web:693be9aa66e7b3c7104f16');
-        expect(firebaseConfig.measurementId).toBe('G-W49MT8XT2T');
-        expect(firebaseConfig.firestoreDatabaseId).toBe('(default)');
-      } else {
-        expect(firebaseConfig.projectId).toBe('gen-lang-client-0535145441');
-        expect(firebaseConfig.authDomain).toContain('firebaseapp.com');
-      }
+      expect(firebaseConfig.projectId).toBe('spinnermine-cloud-production');
+      expect(firebaseConfig.authDomain).toBe('spinnermine-cloud-production.firebaseapp.com');
+      expect(firebaseConfig.apiKey).toBe('AIzaSyB9Eh0vir23mpO60t42-rjbDL77gdIbG-E');
+      expect(firebaseConfig.storageBucket).toBe('spinnermine-cloud-production.firebasestorage.app');
+      expect(firebaseConfig.messagingSenderId).toBe('157443993763');
+      expect(firebaseConfig.appId).toBe('1:157443993763:web:693be9aa66e7b3c7104f16');
+      expect(firebaseConfig.measurementId).toBe('G-W49MT8XT2T');
+      expect(firebaseConfig.firestoreDatabaseId).toBe('(default)');
     });
 
     it('ensures zero service account secrets or private keys are exposed in client configuration', () => {
@@ -35,10 +29,8 @@ describe('SpinnerMine Cloud Phase 2 — Firebase Production Migration Verificati
     it('confirms complete eradication of all legacy project identifiers in configuration', () => {
       const configStr = JSON.stringify(firebaseConfig);
       expect(configStr).not.toContain('grounded-cycling-dv9wh');
-      if (firebaseConfig.projectId === 'spinnermine-cloud-production') {
-        expect(configStr).not.toContain('gen-lang-client-0535145441');
-        expect(configStr).not.toContain('ai-studio-spinnerminecloud');
-      }
+      expect(configStr).not.toContain('gen-lang-client-0535145441');
+      expect(configStr).not.toContain('ai-studio-spinnerminecloud');
     });
   });
 

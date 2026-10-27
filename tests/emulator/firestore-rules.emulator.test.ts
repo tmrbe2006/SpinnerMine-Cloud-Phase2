@@ -215,4 +215,54 @@ describe.skipIf(!isEmulatorActive)('Firebase Emulator Suite: Real firestore.rule
       })
     );
   });
+
+  it('7. Emulator: User can read legacy and archived workers, and link installationId without altering acceptedShares', async () => {
+    // Seed legacy worker 'tm' (no installationId) and archived worker 'ty' for alice
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await db.collection('miningWorkers').doc('w_alice_tm').set({
+        workerId: 'w_alice_tm',
+        userId: 'alice',
+        name: 'tm',
+        status: 'online',
+        acceptedShares: 48,
+        createdAt: new Date().toISOString()
+      });
+      await db.collection('miningWorkers').doc('w_alice_ty').set({
+        workerId: 'w_alice_ty',
+        userId: 'alice',
+        name: 'ty',
+        status: 'archived',
+        isArchived: true,
+        acceptedShares: 12,
+        createdAt: new Date().toISOString()
+      });
+    });
+
+    const aliceContext = testEnv.authenticatedContext('alice');
+    const aliceDb = aliceContext.firestore();
+
+    // Alice can read legacy worker tm
+    await assertSucceeds(aliceDb.collection('miningWorkers').doc('w_alice_tm').get());
+
+    // Alice can read archived worker ty
+    await assertSucceeds(aliceDb.collection('miningWorkers').doc('w_alice_ty').get());
+
+    // Alice can query all her workers (including legacy & archived)
+    const snapshot = await aliceDb.collection('miningWorkers').where('userId', '==', 'alice').get();
+    expect(snapshot.docs.length).toBe(2);
+
+    // Alice can link installationId to tm
+    await assertSucceeds(
+      aliceDb.collection('miningWorkers').doc('w_alice_tm').update({
+        installationId: 'inst_12345678-abcd-ef01-2345-6789abcdef01',
+        installationLinkedAt: new Date().toISOString()
+      })
+    );
+
+    // Bob cannot read Alice's workers
+    const bobContext = testEnv.authenticatedContext('bob');
+    const bobDb = bobContext.firestore();
+    await assertFails(bobDb.collection('miningWorkers').doc('w_alice_tm').get());
+  });
 });
